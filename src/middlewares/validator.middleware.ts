@@ -1,17 +1,15 @@
 import { Request, Response, NextFunction } from "express";
-import { ValidationChain, validationResult } from "express-validator";
-import { CustomError } from "../utils/customError";
+import { validationResult } from "express-validator";
+import { ApiResponse } from "../utils/ApiResponse";
 
-export const validate = (validations: ValidationChain[]) => {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    await Promise.all(validations.map((validation) => validation.run(req)));
+export const validate = (req: Request, res: Response, next: NextFunction) => {
+  const errors = validationResult(req);
 
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      const errorMessages = errors.array().map((err) => err.msg);
-      throw new CustomError("Validation error", 400, errorMessages);
-    }
+  if (!errors.isEmpty()) {
+    const errorMessages = errors.array().map((error) => error.msg);
+    const response = ApiResponse.error(400, "Validation failed", errorMessages);
+    return res.status(response.statusCode).json(response);
+  }
 
-    next();
-  };
+  next();
 };

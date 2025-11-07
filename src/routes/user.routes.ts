@@ -27,8 +27,8 @@ const userController = new UserController();
 //   userController.getAllUsers
 // );
 
-router.get('/test', (req, res) => {
-    res.json({ message: 'User route is working!' });
+router.get("/test", (req, res) => {
+  res.json({ message: "User route is working!" });
 });
 
 export { router as userRouter };

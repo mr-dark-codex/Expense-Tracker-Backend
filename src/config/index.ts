@@ -8,6 +8,11 @@ export const config = {
   mongodb: {
     uri: process.env.MONGODB_URI || "mongodb://localhost:27017/expense-tracker",
   },
+  database: {
+    url:
+      process.env.DATABASE_URL ||
+      "postgresql://postgres:123456@localhost:5432/ExpenseTracker?schema=public",
+  },
   jwt: {
     secret: process.env.JWT_SECRET || "your-jwt-secret-key",
     expiresIn: process.env.JWT_EXPIRATION || "7d",

@@ -1,0 +1,83 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model budget {
+  budgetid         String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  amount           Decimal?           @db.Decimal(10, 2)
+  startdate        DateTime?          @db.Date
+  enddate          DateTime?          @db.Date
+  createdat        DateTime?          @default(now()) @db.Timestamp(6)
+  updatedat        DateTime?          @default(now()) @db.Timestamp(6)
+  budgetallocation budgetallocation[]
+}
+
+model budgetallocation {
+  budgetallocationid String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  budgetid           String    @db.Uuid
+  categoryid         String    @db.Uuid
+  allocatedamount    Decimal?  @db.Decimal(10, 2)
+  description        String?
+  createdat          DateTime? @default(now()) @db.Timestamp(6)
+  updatedat          DateTime? @default(now()) @db.Timestamp(6)
+  budget             budget    @relation(fields: [budgetid], references: [budgetid], onDelete: Cascade, onUpdate: NoAction)
+  category           category  @relation(fields: [categoryid], references: [categoryid], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model category {
+  categoryid       String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  categoryname     String             @unique @db.VarChar(50)
+  description      String?
+  createdat        DateTime?          @default(now()) @db.Timestamp(6)
+  updatedat        DateTime?          @default(now()) @db.Timestamp(6)
+  budgetallocation budgetallocation[]
+  otherpayments    otherpayments[]
+  transactions     transactions[]
+}
+
+model otherpayments {
+  otherpaymentid String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  categoryid     String?   @db.Uuid
+  amount         Decimal?  @db.Decimal(10, 2)
+  paidamount     Decimal?  @db.Decimal(10, 2)
+  description    String?
+  createdat      DateTime? @default(now()) @db.Timestamp(6)
+  updatedat      DateTime? @default(now()) @db.Timestamp(6)
+  category       category? @relation(fields: [categoryid], references: [categoryid], onUpdate: NoAction)
+}
+
+model transactionmode {
+  modeid       String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  modename     String         @unique @db.VarChar(50)
+  amount       Decimal?       @default(0.00) @db.Decimal(10, 2)
+  currency     String         @default("RUPEES") @db.VarChar(10)
+  description  String?
+  createdat    DateTime?      @default(now()) @db.Timestamp(6)
+  updatedat    DateTime?      @default(now()) @db.Timestamp(6)
+  transactions transactions[]
+}
+
+model transactions {
+  transactionid   String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  amount          Decimal               @db.Decimal(10, 2)
+  modeid          String                @db.Uuid
+  categoryid      String?               @db.Uuid
+  transactiontype transaction_type_enum
+  description     String?
+  transactiondate DateTime?             @default(now()) @db.Timestamp(6)
+  createdat       DateTime?             @default(now()) @db.Timestamp(6)
+  updatedat       DateTime?             @default(now()) @db.Timestamp(6)
+  category        category?             @relation(fields: [categoryid], references: [categoryid], onUpdate: NoAction)
+  transactionmode transactionmode       @relation(fields: [modeid], references: [modeid], onDelete: Cascade, onUpdate: NoAction)
+}
+
+enum transaction_type_enum {
+  CREDIT
+  DEBIT
+}
