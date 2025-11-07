@@ -11,4 +11,3 @@ export interface UpdateTransactionModeDto {
   currency?: string;
   description?: string;
 }
-

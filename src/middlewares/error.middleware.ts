@@ -28,7 +28,7 @@ export const errorHandler = (
   // Handle Prisma invalid UUID format errors
   if (err.code === "P2023") {
     const response = ApiResponse.error(400, "Invalid ID format", [
-      "The provided ID is not a valid UUID format"
+      "The provided ID is not a valid UUID format",
     ]);
     return res.status(response.statusCode).json(response);
   }

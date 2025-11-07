@@ -3,7 +3,6 @@ import {
   CreateTransactionModeDto,
   UpdateTransactionModeDto,
 } from "../types/transactionMode.types";
-import { Logger, loggers } from "winston";
 
 export class TransactionModeService {
   async create(data: CreateTransactionModeDto) {
@@ -32,7 +31,7 @@ export class TransactionModeService {
 
   async findById(id: string) {
     return await prisma.transactionmode.findUnique({
-      where: { modeid: id }
+      where: { modeid: id },
     });
   }
 
@@ -49,7 +48,7 @@ export class TransactionModeService {
         amount: true,
         currency: true,
         description: true,
-      }
+      },
     });
   }
 
