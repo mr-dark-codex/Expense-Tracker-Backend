@@ -9,6 +9,10 @@ import os from "os";
 
 import { config } from "./config";
 import { errorHandler } from "./middlewares/error.middleware";
+import {
+  rootRateLimit2,
+  rootRateLimit,
+} from "./middlewares/rateLimiter.middleware";
 import { appRouter } from "./routes/app.routes";
 import { connectDatabase, disconnectDatabase } from "./services/prisma.service";
 
@@ -48,6 +52,11 @@ export class App {
 
   private setupRoutes(): void {
     this.app.use("/api/v1", appRouter);
+
+    // Root route
+    this.app.get("/", rootRateLimit2, (req, res) => {
+      res.redirect("/api/v1/health");
+    });
 
     // 404 handler for all undefined routes
     this.app.use("*", (req, res) => {

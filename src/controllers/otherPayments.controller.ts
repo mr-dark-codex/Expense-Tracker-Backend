@@ -1,14 +1,18 @@
 import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "../utils/ApiResponse";
-import { CategoryService } from "../services/category.service";
+import { OtherPaymentsService } from "../services/otherPayments.service";
 
-export class CategoryController {
-  private categoryService = new CategoryService();
+export class OtherPaymentsController {
+  private otherPaymentsService = new OtherPaymentsService();
 
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const category = await this.categoryService.create(req.body);
-      const response = ApiResponse.success(201, "Category created", category);
+      const otherPayment = await this.otherPaymentsService.create(req.body);
+      const response = ApiResponse.success(
+        201,
+        "Other payment created",
+        otherPayment,
+      );
       return res.status(response.statusCode).json(response);
     } catch (error) {
       next(error);
@@ -17,11 +21,11 @@ export class CategoryController {
 
   getAll = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const categories = await this.categoryService.getAll();
+      const otherPayments = await this.otherPaymentsService.getAll();
       const response = ApiResponse.success(
         200,
-        "Categories retrieved",
-        categories,
+        "Other payments retrieved",
+        otherPayments,
       );
       return res.status(response.statusCode).json(response);
     } catch (error) {
@@ -31,12 +35,18 @@ export class CategoryController {
 
   getById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const category = await this.categoryService.getById(req.params.id);
-      if (!category) {
-        const response = ApiResponse.error(404, "Category not found");
+      const otherPayment = await this.otherPaymentsService.getById(
+        req.params.id,
+      );
+      if (!otherPayment) {
+        const response = ApiResponse.error(404, "Other payment not found");
         return res.status(response.statusCode).json(response);
       }
-      const response = ApiResponse.success(200, "Category retrieved", category);
+      const response = ApiResponse.success(
+        200,
+        "Other payment retrieved",
+        otherPayment,
+      );
       return res.status(response.statusCode).json(response);
     } catch (error) {
       next(error);
@@ -45,11 +55,15 @@ export class CategoryController {
 
   update = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const category = await this.categoryService.update(
+      const otherPayment = await this.otherPaymentsService.update(
         req.params.id,
         req.body,
       );
-      const response = ApiResponse.success(200, "Category updated", category);
+      const response = ApiResponse.success(
+        200,
+        "Other payment updated",
+        otherPayment,
+      );
       return res.status(response.statusCode).json(response);
     } catch (error) {
       next(error);
@@ -58,8 +72,8 @@ export class CategoryController {
 
   delete = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.categoryService.delete(req.params.id);
-      const response = ApiResponse.success(200, "Category deleted");
+      await this.otherPaymentsService.delete(req.params.id);
+      const response = ApiResponse.success(200, "Other payment deleted");
       return res.status(response.statusCode).json(response);
     } catch (error) {
       next(error);
