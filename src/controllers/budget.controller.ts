@@ -1,14 +1,14 @@
 import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "../utils/ApiResponse";
-import { CategoryService } from "../services/category.service";
+import { BudgetService } from "../services/budget.service";
 
-export class CategoryController {
-  private categoryService = new CategoryService();
+export class BudgetController {
+  private budgetService = new BudgetService();
 
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const category = await this.categoryService.create(req.body);
-      const response = ApiResponse.success(201, "Category created", category);
+      const budget = await this.budgetService.create(req.body);
+      const response = ApiResponse.success(201, "Budget created", budget);
       return res.status(response.statusCode).json(response);
     } catch (error) {
       next(error);
@@ -17,12 +17,8 @@ export class CategoryController {
 
   getAll = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const categories = await this.categoryService.getAll();
-      const response = ApiResponse.success(
-        200,
-        "Categories retrieved",
-        categories,
-      );
+      const budgets = await this.budgetService.getAll();
+      const response = ApiResponse.success(200, "Budgets retrieved", budgets);
       return res.status(response.statusCode).json(response);
     } catch (error) {
       next(error);
@@ -31,12 +27,12 @@ export class CategoryController {
 
   getById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const category = await this.categoryService.getById(req.params.id);
-      if (!category) {
-        const response = ApiResponse.error(404, "Category not found");
+      const budget = await this.budgetService.getById(req.params.id);
+      if (!budget) {
+        const response = ApiResponse.error(404, "Budget not found");
         return res.status(response.statusCode).json(response);
       }
-      const response = ApiResponse.success(200, "Category retrieved", category);
+      const response = ApiResponse.success(200, "Budget retrieved", budget);
       return res.status(response.statusCode).json(response);
     } catch (error) {
       next(error);
@@ -45,11 +41,8 @@ export class CategoryController {
 
   update = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const category = await this.categoryService.update(
-        req.params.id,
-        req.body,
-      );
-      const response = ApiResponse.success(200, "Category updated", category);
+      const budget = await this.budgetService.update(req.params.id, req.body);
+      const response = ApiResponse.success(200, "Budget updated", budget);
       return res.status(response.statusCode).json(response);
     } catch (error) {
       next(error);
@@ -58,8 +51,8 @@ export class CategoryController {
 
   delete = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.categoryService.delete(req.params.id);
-      const response = ApiResponse.success(200, "Category deleted");
+      await this.budgetService.delete(req.params.id);
+      const response = ApiResponse.success(200, "Budget deleted");
       return res.status(response.statusCode).json(response);
     } catch (error) {
       next(error);

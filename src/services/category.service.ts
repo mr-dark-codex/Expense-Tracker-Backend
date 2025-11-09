@@ -10,4 +10,29 @@ export class CategoryService {
       },
     });
   }
+
+  async getAll() {
+    return await prisma.category.findMany({
+      orderBy: { createdat: "desc" },
+    });
+  }
+
+  async getById(id: string) {
+    return await prisma.category.findUnique({
+      where: { categoryid: id },
+    });
+  }
+
+  async update(id: string, data: UpdateCategoryDto) {
+    return await prisma.category.update({
+      where: { categoryid: id },
+      data,
+    });
+  }
+
+  async delete(id: string) {
+    return await prisma.category.delete({
+      where: { categoryid: id },
+    });
+  }
 }

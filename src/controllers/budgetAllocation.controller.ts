@@ -1,14 +1,18 @@
 import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "../utils/ApiResponse";
-import { CategoryService } from "../services/category.service";
+import { BudgetAllocationService } from "../services/budgetAllocation.service";
 
-export class CategoryController {
-  private categoryService = new CategoryService();
+export class BudgetAllocationController {
+  private budgetAllocationService = new BudgetAllocationService();
 
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const category = await this.categoryService.create(req.body);
-      const response = ApiResponse.success(201, "Category created", category);
+      const allocation = await this.budgetAllocationService.create(req.body);
+      const response = ApiResponse.success(
+        201,
+        "Budget allocation created",
+        allocation,
+      );
       return res.status(response.statusCode).json(response);
     } catch (error) {
       next(error);
@@ -17,11 +21,11 @@ export class CategoryController {
 
   getAll = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const categories = await this.categoryService.getAll();
+      const allocations = await this.budgetAllocationService.getAll();
       const response = ApiResponse.success(
         200,
-        "Categories retrieved",
-        categories,
+        "Budget allocations retrieved",
+        allocations,
       );
       return res.status(response.statusCode).json(response);
     } catch (error) {
@@ -31,12 +35,18 @@ export class CategoryController {
 
   getById = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const category = await this.categoryService.getById(req.params.id);
-      if (!category) {
-        const response = ApiResponse.error(404, "Category not found");
+      const allocation = await this.budgetAllocationService.getById(
+        req.params.id,
+      );
+      if (!allocation) {
+        const response = ApiResponse.error(404, "Budget allocation not found");
         return res.status(response.statusCode).json(response);
       }
-      const response = ApiResponse.success(200, "Category retrieved", category);
+      const response = ApiResponse.success(
+        200,
+        "Budget allocation retrieved",
+        allocation,
+      );
       return res.status(response.statusCode).json(response);
     } catch (error) {
       next(error);
@@ -45,11 +55,15 @@ export class CategoryController {
 
   update = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const category = await this.categoryService.update(
+      const allocation = await this.budgetAllocationService.update(
         req.params.id,
         req.body,
       );
-      const response = ApiResponse.success(200, "Category updated", category);
+      const response = ApiResponse.success(
+        200,
+        "Budget allocation updated",
+        allocation,
+      );
       return res.status(response.statusCode).json(response);
     } catch (error) {
       next(error);
@@ -58,8 +72,8 @@ export class CategoryController {
 
   delete = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.categoryService.delete(req.params.id);
-      const response = ApiResponse.success(200, "Category deleted");
+      await this.budgetAllocationService.delete(req.params.id);
+      const response = ApiResponse.success(200, "Budget allocation deleted");
       return res.status(response.statusCode).json(response);
     } catch (error) {
       next(error);
