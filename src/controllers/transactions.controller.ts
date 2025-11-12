@@ -7,7 +7,7 @@ export class TransactionsController {
 
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const transaction = await this.transactionsService.create(req.body);
+      const transaction = await this.transactionsService.createv2(req.body);
       const response = ApiResponse.success(
         201,
         "Transaction created",

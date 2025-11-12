@@ -48,6 +48,7 @@ export const errorHandler = (
   }
 
   console.error("Error:", err);
-  const response = ApiResponse.error(500, "Internal server error");
+
+  const response = ApiResponse.error(err.statusCode, err.message || "Internal server error");
   return res.status(response.statusCode).json(response);
 };

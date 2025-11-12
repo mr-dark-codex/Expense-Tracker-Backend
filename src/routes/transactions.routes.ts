@@ -7,7 +7,8 @@ const router = Router();
 const controller = new TransactionsController();
 
 router.get("/", controller.getAll);
-router.post("/", transactionsValidators.create, validate, controller.create);
+// router.post("/", transactionsValidators.create, validate, controller.create);
+router.post("/", controller.create);
 router.put("/:id", transactionsValidators.update, validate, controller.update);
 router.get(
   "/:id",
