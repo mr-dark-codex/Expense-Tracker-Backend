@@ -77,4 +77,20 @@ export class TransactionsController {
       next(error);
     }
   };
+
+  getMonthlySpentByCategory = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const categoryId = req.body.categoryId;
+      console.log(`Fetching total spent for category ID: ${categoryId}`);
+      const totalSpent = await this.transactionsService.getTotalSpentByCategoryInCurrentMonth(categoryId);
+      const response = ApiResponse.success(
+        200,
+        "Total spent retrieved",
+        { categoryId, totalSpent },
+      );
+      return res.status(response.statusCode).json(response);
+    } catch (error) {
+      next(error);
+    }
+  }
 }

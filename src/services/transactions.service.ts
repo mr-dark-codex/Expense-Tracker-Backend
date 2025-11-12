@@ -22,19 +22,26 @@ export class TransactionsService {
       }
 
       // 3. Update allocations
-      await tx.budgetallocation.update({
-        where: { budgetallocationid: budgetAllocation.budgetallocationid },
-        data: {
-          allocatedamount: (budgetAllocation.allocatedamount || new Decimal(0))
-            .sub(new Decimal(data.amount))
-        },
-      });
+      /**
+       * Do not change budget allocation, why we would change budget allocation,
+       * if we want to show how much expensed against allocation, we should keep allocated amount constant
+       * and sum up the transactions against that allocation to show how much is spent within this month.
+       *
+       */
+      // await tx.budgetallocation.update({
+      //   where: { budgetallocationid: budgetAllocation.budgetallocationid },
+      //   data: {
+      //     allocatedamount: (budgetAllocation.allocatedamount || new Decimal(0))
+      //       .sub(new Decimal(data.amount))
+      //   },
+      // });
 
       await tx.transactionmode.update({
         where: { modeid: data.modeid },
         data: {
-          amount: (transactionMode.amount || new Decimal(0))
-            .sub(new Decimal(data.amount))
+          amount: (transactionMode.amount || new Decimal(0)).sub(
+            new Decimal(data.amount),
+          ),
         },
       });
 
@@ -56,14 +63,20 @@ export class TransactionsService {
     });
   }
 
-
   async create(data: any) {
-
     // Handle other fields
 
-    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    const startOfNextMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
-    console.log(data)
+    const startOfMonth = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      1,
+    );
+    const startOfNextMonth = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth() + 1,
+      1,
+    );
+    console.log(data);
 
     const budgetAllocatedList = await prisma.budgetallocation.findMany({
       where: {
@@ -77,28 +90,22 @@ export class TransactionsService {
         budget: true, // 👈 include the related budget
       },
       orderBy: {
-        createdat: 'desc', // latest first
+        createdat: "desc", // latest first
       },
       take: 1, // limit 1
     });
 
-
-
-
     console.log("Budget Allocated List:", budgetAllocatedList);
-    console.log(budgetAllocatedList[0].budget.amount)
-
+    console.log(budgetAllocatedList[0].budget.amount);
 
     if (budgetAllocatedList.length === 0) {
-      throw new Error("No budget allocation found for this category in the current month.");
+      throw new Error(
+        "No budget allocation found for this category in the current month.",
+      );
     }
 
     // const totalAllocatedAmount = budgetAllocatedList[0]?.allocatedamount ?? new Decimal(0); // fallback to 0
     // budgetAllocatedList[0].allocatedamount = totalAllocatedAmount.sub(new Decimal(data?.amount ?? 0));
-
-
-
-
 
     // const current = new Decimal(budgetAllocatedList[0].allocatedamount);
     // const amountToSubtract = new Decimal(data.amount);
@@ -166,7 +173,7 @@ export class TransactionsService {
       // Add validation rules here
       this.validateBudgetLimit(data),
       this.validateAllocationLimit(data),
-      this.validateTransactionModeAmount(data)
+      this.validateTransactionModeAmount(data),
       // this.validateMonthlySpending(data)
     ]);
   }
@@ -178,12 +185,20 @@ export class TransactionsService {
     const allocatedAmount = allocation?.allocatedamount || new Decimal(0);
     const transactionAmount = new Decimal(data.amount || 0);
 
-    console.log(`Validating allocation limit: Transaction Amount = ${transactionAmount}, Allocated Amount = ${allocatedAmount}`);
+    console.log(
+      `Validating allocation limit: Transaction Amount = ${transactionAmount}, Allocated Amount = ${allocatedAmount}`,
+    );
 
     // Use Decimal.greaterThan() method
     if (transactionAmount.greaterThan(allocatedAmount)) {
-      throw new Error(`Transaction amount (${transactionAmount}) exceeds allocated budget (${allocatedAmount})`);
+      throw new Error(
+        `Transaction amount (${transactionAmount}) exceeds allocated budget (${allocatedAmount})`,
+      );
     }
+  }
+
+  async getTotalSpentByCategoryInCurrentMonth(categoryId: string) {
+    return await this.getMonthlySpentByCateogry(categoryId);
   }
 
   private async validateBudgetLimit(data: any) {
@@ -193,7 +208,9 @@ export class TransactionsService {
     const transactionAmount = new Decimal(data.amount || 0);
 
     if (transactionAmount.greaterThan(budgetAmount)) {
-      throw new Error(`Transaction amount (${transactionAmount}) exceeds budget limit (${budgetAmount})`);
+      throw new Error(
+        `Transaction amount (${transactionAmount}) exceeds budget limit (${budgetAmount})`,
+      );
     }
   }
 
@@ -214,16 +231,21 @@ export class TransactionsService {
     }
   }
 
-
-
   private async validateMonthlySpendingLimit(data: any) {
-    // 
+    //
   }
 
   private async getBudgetForCategory(data: any) {
-
-    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    const startOfNextMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
+    const startOfMonth = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      1,
+    );
+    const startOfNextMonth = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth() + 1,
+      1,
+    );
 
     const budgetAllocatedList = await prisma.budgetallocation.findMany({
       where: {
@@ -237,24 +259,31 @@ export class TransactionsService {
         budget: true, // 👈 include the related budget
       },
       orderBy: {
-        createdat: 'desc', // latest first
+        createdat: "desc", // latest first
       },
       take: 1, // limit 1
     });
 
     if (budgetAllocatedList.length == 0) {
-      throw new Error("No budget allocation found for this category in the current month.");
+      throw new Error(
+        "No budget allocation found for this category in the current month.",
+      );
     }
 
     return budgetAllocatedList[0].budget;
-
-
   }
 
   private async getBudgetAllocationForCategory(data: any) {
-
-    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-    const startOfNextMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1);
+    const startOfMonth = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth(),
+      1,
+    );
+    const startOfNextMonth = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth() + 1,
+      1,
+    );
 
     const budgetAllocatedList = await prisma.budgetallocation.findMany({
       where: {
@@ -268,16 +297,34 @@ export class TransactionsService {
         budget: true, // 👈 include the related budget
       },
       orderBy: {
-        createdat: 'desc', // latest first
+        createdat: "desc", // latest first
       },
       take: 1, // limit 1
     });
 
     if (budgetAllocatedList.length == 0) {
-      throw new Error("No budget allocation found for this category in the current month.");
+      throw new Error(
+        "No budget allocation found for this category in the current month.",
+      );
     }
 
     return budgetAllocatedList[0];
   }
 
+  private async getMonthlySpentByCateogry(categoryId: string) {
+    const totalAmount = await prisma.transactions.aggregate({
+      _sum: {
+        amount: true,
+      },
+      where: {
+        categoryid: categoryId,
+        transactiondate: {
+          gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
+          lt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+        },
+      },
+    });
+
+    return totalAmount._sum.amount || new Decimal(0);
+  }
 }

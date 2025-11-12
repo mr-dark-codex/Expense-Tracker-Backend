@@ -23,4 +23,7 @@ router.delete(
   controller.delete,
 );
 
+router.post('/get-expense', 
+  controller.getMonthlySpentByCategory
+)
 export { router as transactionsRouter };
