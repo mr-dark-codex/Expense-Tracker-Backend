@@ -3,8 +3,10 @@ import {
   CreateOtherPaymentDto,
   UpdateOtherPaymentDto,
 } from "../types/otherPayments.types";
+import { TransactionsService } from "./transactions.service";
 
 export class OtherPaymentsService {
+  // private transactionsService = new TransactionsService();
   async create(data: CreateOtherPaymentDto) {
     return await prisma.otherpayments.create({
       data: {
@@ -37,10 +39,20 @@ export class OtherPaymentsService {
     });
   }
 
-  async update(id: string, data: UpdateOtherPaymentDto) {
+  async update(id: string, data: any) {
     return await prisma.otherpayments.update({
       where: { otherpaymentid: id },
       data,
+      include: {
+        category: true,
+      },
+    });
+  }
+
+  async updatePaidAmount(id: string, paidamount: string) {
+    return await prisma.otherpayments.update({
+      where: { otherpaymentid: "781329f6-7d63-4710-85b2-31ed8576d6f6" },
+      data: { paidamount },
       include: {
         category: true,
       },

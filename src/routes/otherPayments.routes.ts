@@ -7,7 +7,7 @@ const router = Router();
 const controller = new OtherPaymentsController();
 
 router.get("/", controller.getAll);
-router.post("/", otherPaymentsValidators.create, validate, controller.create);
+router.post("/", otherPaymentsValidators.create, validate, controller.createV2);
 router.put("/:id", otherPaymentsValidators.update, validate, controller.update);
 router.get(
   "/:id",

@@ -1,9 +1,11 @@
 import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "../utils/ApiResponse";
 import { OtherPaymentsService } from "../services/otherPayments.service";
+import { TransactionsService } from "../services/transactions.service";
 
 export class OtherPaymentsController {
   private otherPaymentsService = new OtherPaymentsService();
+  private transactionsService = new TransactionsService();
 
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -17,6 +19,29 @@ export class OtherPaymentsController {
     } catch (error) {
       next(error);
     }
+  };
+
+  createV2 = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      // First send the data to transaction service layer if successful then add it to Other payment service
+      const transaction = await this.transactionsService.createv2(req.body);
+      if (transaction && req.body.otherspayment == true) {
+        const otherPayment = await this.otherPaymentsService.create(req.body);
+        const response = ApiResponse.success(
+          201,
+          "Other payment created along with transaction",
+          { transaction, otherPayment },
+        );
+        return res.status(response.statusCode).json(response);
+      } else {
+        const response = ApiResponse.success(
+          201,
+          "Transaction created without other payment",
+          transaction,
+        );
+        return res.status(response.statusCode).json(response);
+      }
+    } catch (error) {}
   };
 
   getAll = async (req: Request, res: Response, next: NextFunction) => {

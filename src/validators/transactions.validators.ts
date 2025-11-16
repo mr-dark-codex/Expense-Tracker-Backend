@@ -30,6 +30,10 @@ export const transactionsValidators = {
       .optional()
       .isISO8601()
       .withMessage("Invalid transaction date"),
+    body("otherspayment")
+      .optional()
+      .isBoolean()
+      .withMessage("Invalid others payment value"),
   ],
 
   update: [
