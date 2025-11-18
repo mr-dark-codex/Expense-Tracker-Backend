@@ -69,6 +69,7 @@ model transactions {
   modeid          String                @db.Uuid
   categoryid      String?               @db.Uuid
   transactiontype transaction_type_enum
+  status          status_enum
   description     String?
   transactiondate DateTime?             @default(now()) @db.Timestamp(6)
   createdat       DateTime?             @default(now()) @db.Timestamp(6)
@@ -80,4 +81,10 @@ model transactions {
 enum transaction_type_enum {
   CREDIT
   DEBIT
+}
+
+enum status_enum {
+  PENDING
+  COMPLETED
+  FAILED
 }

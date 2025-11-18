@@ -2,18 +2,31 @@ import { Request, Response, NextFunction } from "express";
 import { ApiResponse } from "../utils/ApiResponse";
 import { OtherPaymentsService } from "../services/otherPayments.service";
 import { TransactionsService } from "../services/transactions.service";
+import { prisma } from "../services/prisma.service";
 
 export class OtherPaymentsController {
   private otherPaymentsService = new OtherPaymentsService();
   private transactionsService = new TransactionsService();
 
-  create = async (req: Request, res: Response, next: NextFunction) => {
+  createV2 = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const otherPayment = await this.otherPaymentsService.create(req.body);
+      const result = await prisma.$transaction(async (tx) => {
+        // Create transaction first
+        const transaction = await this.transactionsService.createv2(req.body, tx);
+        
+        // If otherspayment flag is true, create other payment
+        if (req.body.otherspayment === true) {
+          const otherPayment = await this.otherPaymentsService.createWithTx(req.body, tx);
+          return { transaction, otherPayment };
+        }
+        
+        return { transaction };
+      });
+
       const response = ApiResponse.success(
         201,
-        "Other payment created",
-        otherPayment,
+        req.body.otherspayment ? "Other payment created along with transaction" : "Transaction created",
+        result,
       );
       return res.status(response.statusCode).json(response);
     } catch (error) {
@@ -21,28 +34,8 @@ export class OtherPaymentsController {
     }
   };
 
-  createV2 = async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      // First send the data to transaction service layer if successful then add it to Other payment service
-      const transaction = await this.transactionsService.createv2(req.body);
-      if (transaction && req.body.otherspayment == true) {
-        const otherPayment = await this.otherPaymentsService.create(req.body);
-        const response = ApiResponse.success(
-          201,
-          "Other payment created along with transaction",
-          { transaction, otherPayment },
-        );
-        return res.status(response.statusCode).json(response);
-      } else {
-        const response = ApiResponse.success(
-          201,
-          "Transaction created without other payment",
-          transaction,
-        );
-        return res.status(response.statusCode).json(response);
-      }
-    } catch (error) {}
-  };
+
+
 
   getAll = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -88,6 +81,40 @@ export class OtherPaymentsController {
         200,
         "Other payment updated",
         otherPayment,
+      );
+      return res.status(response.statusCode).json(response);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  updatePaidAmount = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        // Create transaction first
+        const transaction = await this.transactionsService.createv2(req.body, tx);
+        
+        // If otherspayment flag is true, update paid amount
+        if (req.body.otherspayment === true) {
+          const otherPayment = await this.otherPaymentsService.updatePaidAmount(
+            req.params.id,
+            req.body.amount,
+            tx
+          );
+          return { transaction, otherPayment };
+        }
+        
+        return { transaction };
+      });
+
+      const response = ApiResponse.success(
+        200,
+        req.body.otherspayment ? "Payment processed successfully" : "Transaction created",
+        result,
       );
       return res.status(response.statusCode).json(response);
     } catch (error) {

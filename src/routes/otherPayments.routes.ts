@@ -15,6 +15,8 @@ router.get(
   validate,
   controller.getById,
 );
+
+router.put("/update-amount/:id", controller.updatePaidAmount);
 router.delete(
   "/:id",
   otherPaymentsValidators.delete,

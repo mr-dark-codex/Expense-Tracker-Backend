@@ -4,27 +4,18 @@ import {
   CreateTransactionDto,
   UpdateTransactionDto,
 } from "../types/transactions.types";
-import { OtherPaymentsService } from "./otherPayments.service";
+import { Prisma } from "generated/prisma/client";
 
 export class TransactionsService {
-  private otherPaymentsService = new OtherPaymentsService();
-  async createv2(data: any) {
-    return await prisma.$transaction(async (tx) => {
-      // 1. Validate inside transaction to prevent race conditions
+  async createv2(data: any, tx?: Prisma.TransactionClient) {
+    const executeTransaction = async (txClient: Prisma.TransactionClient) => {
+      // 1. Validate inside transaction
       if (data.transactiontype === "DEBIT") {
-        await this.validateTransactionRules(data);
+        await this.validateTransactionRulesWithTx(data, txClient);
       }
 
-      if (data.otherspayment == true && data.transactiontype === "CREDIT") {
-        await this.otherPaymentsService.updatePaidAmount(
-          data.categoryid,
-          data.amount,
-        );
-      }
-
-      // 2. Get fresh data within transaction
-      // const budgetAllocation = await this.getBudgetAllocationForCategory(data);
-      const transactionMode = await tx.transactionmode.findUnique({
+      // 2. Get and update transaction mode
+      const transactionMode = await txClient.transactionmode.findUnique({
         where: { modeid: data.modeid },
       });
 
@@ -32,45 +23,20 @@ export class TransactionsService {
         throw new Error("Transaction mode not found");
       }
 
-      // 3. Update allocations
-      /**
-       * Do not change budget allocation, why we would change budget allocation,
-       * if we want to show how much expensed against allocation, we should keep allocated amount constant
-       * and sum up the transactions against that allocation to show how much is spent within this month.
-       *
-       */
-      // await tx.budgetallocation.update({
-      //   where: { budgetallocationid: budgetAllocation.budgetallocationid },
-      //   data: {
-      //     allocatedamount: (budgetAllocation.allocatedamount || new Decimal(0))
-      //       .sub(new Decimal(data.amount))
-      //   },
-      // });
+      const currentAmount = transactionMode.amount || new Decimal(0);
+      const transactionAmount = new Decimal(data.amount);
+      
+      const newAmount = data.transactiontype === "DEBIT" 
+        ? currentAmount.sub(transactionAmount)
+        : currentAmount.add(transactionAmount);
 
-      if (data.transactiontype === "DEBIT") {
-        // For DEBIT transactions, we need to subtract the amount from the transaction mode
-        await tx.transactionmode.update({
-          where: { modeid: data.modeid },
-          data: {
-            amount: (transactionMode.amount || new Decimal(0)).sub(
-              new Decimal(data.amount),
-            ),
-          },
-        });
-      } else if (data.transactiontype === "CREDIT") {
-        // For CREDIT transactions, we need to add back the amount to the transaction mode
-        await tx.transactionmode.update({
-          where: { modeid: data.modeid },
-          data: {
-            amount: (transactionMode.amount || new Decimal(0)).add(
-              new Decimal(data.amount),
-            ),
-          },
-        });
-      }
+      await txClient.transactionmode.update({
+        where: { modeid: data.modeid },
+        data: { amount: newAmount },
+      });
 
-      // 4. Create transaction
-      return await tx.transactions.create({
+      // 3. Create transaction
+      return await txClient.transactions.create({
         data: {
           amount: data.amount,
           modeid: data.modeid,
@@ -78,81 +44,17 @@ export class TransactionsService {
           transactiontype: data.transactiontype,
           description: data.description || null,
           transactiondate: data.transactiondate || new Date(),
+          status: "COMPLETED",
         },
         include: {
           category: true,
           transactionmode: true,
         },
       });
-    });
-  }
+    };
 
-  async create(data: any) {
-    // Handle other fields
-
-    const startOfMonth = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth(),
-      1,
-    );
-    const startOfNextMonth = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth() + 1,
-      1,
-    );
-    console.log(data);
-
-    const budgetAllocatedList = await prisma.budgetallocation.findMany({
-      where: {
-        categoryid: data.categoryid,
-        createdat: {
-          gte: startOfMonth,
-          lt: startOfNextMonth,
-        },
-      },
-      include: {
-        budget: true, // 👈 include the related budget
-      },
-      orderBy: {
-        createdat: "desc", // latest first
-      },
-      take: 1, // limit 1
-    });
-
-    console.log("Budget Allocated List:", budgetAllocatedList);
-    console.log(budgetAllocatedList[0].budget.amount);
-
-    if (budgetAllocatedList.length === 0) {
-      throw new Error(
-        "No budget allocation found for this category in the current month.",
-      );
-    }
-
-    // const totalAllocatedAmount = budgetAllocatedList[0]?.allocatedamount ?? new Decimal(0); // fallback to 0
-    // budgetAllocatedList[0].allocatedamount = totalAllocatedAmount.sub(new Decimal(data?.amount ?? 0));
-
-    // const current = new Decimal(budgetAllocatedList[0].allocatedamount);
-    // const amountToSubtract = new Decimal(data.amount);
-
-    // // Subtract safely using Decimal math
-    // budgetAllocatedList[0].allocatedamount = current.sub(amountToSubtract);
-
-    // return await prisma.transactions.create({
-    //   data: {
-    //     amount: data.amount,
-    //     modeid: data.modeid,
-    //     categoryid: data.categoryid || null,
-    //     transactiontype: data.transactiontype,
-    //     description: data.description || null,
-    //     transactiondate: data.transactiondate || new Date(),
-    //   },
-    //   include: {
-    //     category: true,
-    //     transactionmode: true,
-    //   },
-    // });
-
-    return { message: "Functionality under development" };
+    // Use provided transaction or create new one
+    return tx ? executeTransaction(tx) : prisma.$transaction(executeTransaction);
   }
 
   async getAll() {
@@ -192,54 +94,23 @@ export class TransactionsService {
     });
   }
 
-  /**
-   *
-   * @param CreateTransactionDto data
-   * @returns Promise<void>
-   * @description Validates transaction rules non-sequentially that if error occurs, which occur first, it is captured.
-   * But if one validation fails, the subsequent validations are executed.
-   * This approach provides comprehensive feedback on all potential issues with the transaction data.
-   */
-
-  // private async validateTransactionRules(data: any) {
-  //   const validations = await Promise.all([
-  //     // Add validation rules here
-  //     this.validateBudgetLimit(data),
-  //     this.validateAllocationLimit(data),
-  //     this.validateTransactionModeAmount(data),
-  //     // this.validateMonthlySpending(data)
-  //   ]);
-  // }
-
-  /**
-   * @param CreateTransactionDto data
-   * @returns Promise<void>
-   * @description Validates transaction rules are sequentially, stops at first error.
-   */
-
-  private async validateTransactionRules(data: any) {
-    // Validates in order, stops at first error
-    await this.validateBudgetLimit(data);
-    await this.validateAllocationLimit(data);
-    await this.validateTransactionModeAmount(data);
+  async getTotalSpentByCategoryInCurrentMonth(categoryId: string) {
+    return await this.getMonthlySpentByCategory(categoryId);
   }
 
-  private async validateAllocationLimit(data: any) {
-    const allocation = await this.getBudgetAllocationForCategory(data);
+  private async validateTransactionRulesWithTx(data: any, tx: Prisma.TransactionClient) {
+    // Validates in order, stops at first error
+    await this.validateBudgetLimitWithTx(data, tx);
+    await this.validateAllocationLimitWithTx(data, tx);
+    await this.validateTransactionModeAmountWithTx(data, tx);
+  }
 
-    // Keep as Decimal objects and use Decimal methods
+  private async validateAllocationLimitWithTx(data: any, tx: Prisma.TransactionClient) {
+    const allocation = await this.getBudgetAllocationForCategoryWithTx(data, tx);
+    
     const allocatedAmount = allocation?.allocatedamount || new Decimal(0);
     const transactionAmount = new Decimal(data.amount || 0);
 
-    console.log(
-      `Validating allocation limit: Transaction Amount = ${transactionAmount}, Allocated Amount = ${allocatedAmount}`,
-    );
-    console.log(
-      "transactionAmount.greaterThan(allocatedAmount) : ",
-      transactionAmount.greaterThan(allocatedAmount),
-    );
-
-    // Use Decimal.greaterThan() method
     if (transactionAmount.greaterThan(allocatedAmount)) {
       throw new Error(
         `Transaction amount (${transactionAmount}) exceeds allocated budget (${allocatedAmount})`,
@@ -247,19 +118,11 @@ export class TransactionsService {
     }
   }
 
-  async getTotalSpentByCategoryInCurrentMonth(categoryId: string) {
-    return await this.getMonthlySpentByCateogry(categoryId);
-  }
-
-  private async validateBudgetLimit(data: any) {
-    const budget = await this.getBudgetForCategory(data);
-
+  private async validateBudgetLimitWithTx(data: any, tx: Prisma.TransactionClient) {
+    const budget = await this.getBudgetForCategoryWithTx(data, tx);
+    
     const budgetAmount = budget?.amount || new Decimal(0);
     const transactionAmount = new Decimal(data.amount || 0);
-
-    console.log(
-      `Validating allocation limit: Transaction Amount = ${transactionAmount}, budget Amount = ${budgetAmount}`,
-    );
 
     if (transactionAmount.greaterThan(budgetAmount)) {
       throw new Error(
@@ -268,8 +131,8 @@ export class TransactionsService {
     }
   }
 
-  private async validateTransactionModeAmount(data: any) {
-    const mode = await prisma.transactionmode.findUnique({
+  private async validateTransactionModeAmountWithTx(data: any, tx: Prisma.TransactionClient) {
+    const mode = await tx.transactionmode.findUnique({
       where: { modeid: data.modeid },
     });
 
@@ -280,32 +143,15 @@ export class TransactionsService {
     const modeAmount = mode?.amount || new Decimal(0);
     const transactionAmount = new Decimal(data.amount || 0);
 
-    console.log(
-      `Validating allocation limit: Transaction Amount = ${transactionAmount}, Mode Amount = ${modeAmount}`,
-    );
-
-    if (transactionAmount.greaterThan(modeAmount)) {
-      throw new Error(`Transaction amount exceeds Transaction mode limit`);
+    if (data.transactiontype === "DEBIT" && transactionAmount.greaterThan(modeAmount)) {
+      throw new Error(`Insufficient balance. Available: ${modeAmount}, Required: ${transactionAmount}`);
     }
   }
 
-  private async validateMonthlySpendingLimit(data: any) {
-    //
-  }
+  private async getBudgetForCategoryWithTx(data: any, tx: Prisma.TransactionClient) {
+    const { startOfMonth, startOfNextMonth } = this.getCurrentMonthRange();
 
-  private async getBudgetForCategory(data: any) {
-    const startOfMonth = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth(),
-      1,
-    );
-    const startOfNextMonth = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth() + 1,
-      1,
-    );
-
-    const budgetAllocatedList = await prisma.budgetallocation.findMany({
+    const budgetAllocation = await tx.budgetallocation.findFirst({
       where: {
         categoryid: data.categoryid,
         createdat: {
@@ -313,37 +159,21 @@ export class TransactionsService {
           lt: startOfNextMonth,
         },
       },
-      include: {
-        budget: true, // 👈 include the related budget
-      },
-      orderBy: {
-        createdat: "desc", // latest first
-      },
-      take: 1, // limit 1
+      include: { budget: true },
+      orderBy: { createdat: "desc" },
     });
 
-    if (budgetAllocatedList.length == 0) {
-      throw new Error(
-        "No budget allocation found for this category in the current month.",
-      );
+    if (!budgetAllocation) {
+      throw new Error("No budget allocation found for this category in the current month.");
     }
 
-    return budgetAllocatedList[0].budget;
+    return budgetAllocation.budget;
   }
 
-  private async getBudgetAllocationForCategory(data: any) {
-    const startOfMonth = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth(),
-      1,
-    );
-    const startOfNextMonth = new Date(
-      new Date().getFullYear(),
-      new Date().getMonth() + 1,
-      1,
-    );
+  private async getBudgetAllocationForCategoryWithTx(data: any, tx: Prisma.TransactionClient) {
+    const { startOfMonth, startOfNextMonth } = this.getCurrentMonthRange();
 
-    const budgetAllocatedList = await prisma.budgetallocation.findMany({
+    const budgetAllocation = await tx.budgetallocation.findFirst({
       where: {
         categoryid: data.categoryid,
         createdat: {
@@ -351,25 +181,27 @@ export class TransactionsService {
           lt: startOfNextMonth,
         },
       },
-      include: {
-        budget: true, // 👈 include the related budget
-      },
-      orderBy: {
-        createdat: "desc", // latest first
-      },
-      take: 1, // limit 1
+      include: { budget: true },
+      orderBy: { createdat: "desc" },
     });
 
-    if (budgetAllocatedList.length == 0) {
-      throw new Error(
-        "No budget allocation found for this category in the current month.",
-      );
+    if (!budgetAllocation) {
+      throw new Error("No budget allocation found for this category in the current month.");
     }
 
-    return budgetAllocatedList[0];
+    return budgetAllocation;
   }
 
-  private async getMonthlySpentByCateogry(categoryId: string) {
+  private getCurrentMonthRange() {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return { startOfMonth, startOfNextMonth };
+  }
+
+  private async getMonthlySpentByCategory(categoryId: string) {
+    const { startOfMonth, startOfNextMonth } = this.getCurrentMonthRange();
+    
     const totalAmount = await prisma.transactions.aggregate({
       _sum: {
         amount: true,
@@ -377,8 +209,8 @@ export class TransactionsService {
       where: {
         categoryid: categoryId,
         transactiondate: {
-          gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
-          lt: new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1),
+          gte: startOfMonth,
+          lt: startOfNextMonth,
         },
       },
     });
