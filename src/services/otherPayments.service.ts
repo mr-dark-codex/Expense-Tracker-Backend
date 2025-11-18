@@ -65,7 +65,11 @@ export class OtherPaymentsService {
     });
   }
 
-  async updatePaidAmount(otherpaymentid: string, paidamount: string, tx?: Prisma.TransactionClient) {
+  async updatePaidAmount(
+    otherpaymentid: string,
+    paidamount: string,
+    tx?: Prisma.TransactionClient,
+  ) {
     const executeUpdate = async (txClient: Prisma.TransactionClient) => {
       const otherpayment = await txClient.otherpayments.findUnique({
         where: { otherpaymentid },

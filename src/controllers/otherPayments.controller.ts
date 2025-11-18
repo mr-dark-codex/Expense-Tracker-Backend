@@ -12,20 +12,28 @@ export class OtherPaymentsController {
     try {
       const result = await prisma.$transaction(async (tx) => {
         // Create transaction first
-        const transaction = await this.transactionsService.createv2(req.body, tx);
-        
+        const transaction = await this.transactionsService.createv2(
+          req.body,
+          tx,
+        );
+
         // If otherspayment flag is true, create other payment
         if (req.body.otherspayment === true) {
-          const otherPayment = await this.otherPaymentsService.createWithTx(req.body, tx);
+          const otherPayment = await this.otherPaymentsService.createWithTx(
+            req.body,
+            tx,
+          );
           return { transaction, otherPayment };
         }
-        
+
         return { transaction };
       });
 
       const response = ApiResponse.success(
         201,
-        req.body.otherspayment ? "Other payment created along with transaction" : "Transaction created",
+        req.body.otherspayment
+          ? "Other payment created along with transaction"
+          : "Transaction created",
         result,
       );
       return res.status(response.statusCode).json(response);
@@ -33,9 +41,6 @@ export class OtherPaymentsController {
       next(error);
     }
   };
-
-
-
 
   getAll = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -96,24 +101,29 @@ export class OtherPaymentsController {
     try {
       const result = await prisma.$transaction(async (tx) => {
         // Create transaction first
-        const transaction = await this.transactionsService.createv2(req.body, tx);
-        
+        const transaction = await this.transactionsService.createv2(
+          req.body,
+          tx,
+        );
+
         // If otherspayment flag is true, update paid amount
         if (req.body.otherspayment === true) {
           const otherPayment = await this.otherPaymentsService.updatePaidAmount(
             req.params.id,
             req.body.amount,
-            tx
+            tx,
           );
           return { transaction, otherPayment };
         }
-        
+
         return { transaction };
       });
 
       const response = ApiResponse.success(
         200,
-        req.body.otherspayment ? "Payment processed successfully" : "Transaction created",
+        req.body.otherspayment
+          ? "Payment processed successfully"
+          : "Transaction created",
         result,
       );
       return res.status(response.statusCode).json(response);

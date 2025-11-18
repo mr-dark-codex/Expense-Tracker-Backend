@@ -88,9 +88,7 @@ export class TransactionsService {
     });
   }
 
-  async createv3Withtx(data: any, tx: Prisma.TransactionClient) {
-    
-  }
+  async createv3Withtx(data: any, tx: Prisma.TransactionClient) {}
 
   async getAll() {
     return await prisma.transactions.findMany({

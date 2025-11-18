@@ -25,10 +25,11 @@ export class TransactionsService {
 
       const currentAmount = transactionMode.amount || new Decimal(0);
       const transactionAmount = new Decimal(data.amount);
-      
-      const newAmount = data.transactiontype === "DEBIT" 
-        ? currentAmount.sub(transactionAmount)
-        : currentAmount.add(transactionAmount);
+
+      const newAmount =
+        data.transactiontype === "DEBIT"
+          ? currentAmount.sub(transactionAmount)
+          : currentAmount.add(transactionAmount);
 
       await txClient.transactionmode.update({
         where: { modeid: data.modeid },
@@ -54,7 +55,9 @@ export class TransactionsService {
     };
 
     // Use provided transaction or create new one
-    return tx ? executeTransaction(tx) : prisma.$transaction(executeTransaction);
+    return tx
+      ? executeTransaction(tx)
+      : prisma.$transaction(executeTransaction);
   }
 
   async getAll() {
@@ -98,16 +101,25 @@ export class TransactionsService {
     return await this.getMonthlySpentByCategory(categoryId);
   }
 
-  private async validateTransactionRulesWithTx(data: any, tx: Prisma.TransactionClient) {
+  private async validateTransactionRulesWithTx(
+    data: any,
+    tx: Prisma.TransactionClient,
+  ) {
     // Validates in order, stops at first error
     await this.validateBudgetLimitWithTx(data, tx);
     await this.validateAllocationLimitWithTx(data, tx);
     await this.validateTransactionModeAmountWithTx(data, tx);
   }
 
-  private async validateAllocationLimitWithTx(data: any, tx: Prisma.TransactionClient) {
-    const allocation = await this.getBudgetAllocationForCategoryWithTx(data, tx);
-    
+  private async validateAllocationLimitWithTx(
+    data: any,
+    tx: Prisma.TransactionClient,
+  ) {
+    const allocation = await this.getBudgetAllocationForCategoryWithTx(
+      data,
+      tx,
+    );
+
     const allocatedAmount = allocation?.allocatedamount || new Decimal(0);
     const transactionAmount = new Decimal(data.amount || 0);
 
@@ -118,9 +130,12 @@ export class TransactionsService {
     }
   }
 
-  private async validateBudgetLimitWithTx(data: any, tx: Prisma.TransactionClient) {
+  private async validateBudgetLimitWithTx(
+    data: any,
+    tx: Prisma.TransactionClient,
+  ) {
     const budget = await this.getBudgetForCategoryWithTx(data, tx);
-    
+
     const budgetAmount = budget?.amount || new Decimal(0);
     const transactionAmount = new Decimal(data.amount || 0);
 
@@ -131,7 +146,10 @@ export class TransactionsService {
     }
   }
 
-  private async validateTransactionModeAmountWithTx(data: any, tx: Prisma.TransactionClient) {
+  private async validateTransactionModeAmountWithTx(
+    data: any,
+    tx: Prisma.TransactionClient,
+  ) {
     const mode = await tx.transactionmode.findUnique({
       where: { modeid: data.modeid },
     });
@@ -143,12 +161,20 @@ export class TransactionsService {
     const modeAmount = mode?.amount || new Decimal(0);
     const transactionAmount = new Decimal(data.amount || 0);
 
-    if (data.transactiontype === "DEBIT" && transactionAmount.greaterThan(modeAmount)) {
-      throw new Error(`Insufficient balance. Available: ${modeAmount}, Required: ${transactionAmount}`);
+    if (
+      data.transactiontype === "DEBIT" &&
+      transactionAmount.greaterThan(modeAmount)
+    ) {
+      throw new Error(
+        `Insufficient balance. Available: ${modeAmount}, Required: ${transactionAmount}`,
+      );
     }
   }
 
-  private async getBudgetForCategoryWithTx(data: any, tx: Prisma.TransactionClient) {
+  private async getBudgetForCategoryWithTx(
+    data: any,
+    tx: Prisma.TransactionClient,
+  ) {
     const { startOfMonth, startOfNextMonth } = this.getCurrentMonthRange();
 
     const budgetAllocation = await tx.budgetallocation.findFirst({
@@ -164,13 +190,18 @@ export class TransactionsService {
     });
 
     if (!budgetAllocation) {
-      throw new Error("No budget allocation found for this category in the current month.");
+      throw new Error(
+        "No budget allocation found for this category in the current month.",
+      );
     }
 
     return budgetAllocation.budget;
   }
 
-  private async getBudgetAllocationForCategoryWithTx(data: any, tx: Prisma.TransactionClient) {
+  private async getBudgetAllocationForCategoryWithTx(
+    data: any,
+    tx: Prisma.TransactionClient,
+  ) {
     const { startOfMonth, startOfNextMonth } = this.getCurrentMonthRange();
 
     const budgetAllocation = await tx.budgetallocation.findFirst({
@@ -186,7 +217,9 @@ export class TransactionsService {
     });
 
     if (!budgetAllocation) {
-      throw new Error("No budget allocation found for this category in the current month.");
+      throw new Error(
+        "No budget allocation found for this category in the current month.",
+      );
     }
 
     return budgetAllocation;
@@ -201,7 +234,7 @@ export class TransactionsService {
 
   private async getMonthlySpentByCategory(categoryId: string) {
     const { startOfMonth, startOfNextMonth } = this.getCurrentMonthRange();
-    
+
     const totalAmount = await prisma.transactions.aggregate({
       _sum: {
         amount: true,
