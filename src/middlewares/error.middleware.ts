@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { CustomError } from "../utils/customError";
 import { ApiResponse } from "../utils/ApiResponse";
+import { config } from "../config";
 
 export const errorHandler = (
   err: any,
@@ -8,6 +9,10 @@ export const errorHandler = (
   res: Response,
   next: NextFunction,
 ) => {
+  if (config.env === "development") {
+    console.error("Error:", err);
+  }
+
   // Handle Prisma unique constraint errors
   if (err.code === "P2002") {
     const field = err.meta?.target?.[0] || "field";
@@ -43,11 +48,10 @@ export const errorHandler = (
 
   // Handle custom errors
   if (err instanceof CustomError) {
+    // console.log('Err : ', err)
     const response = ApiResponse.error(err.statusCode, err.message, err.errors);
     return res.status(response.statusCode).json(response);
   }
-
-  console.error("Error:", err);
 
   const response = ApiResponse.error(
     err.statusCode,

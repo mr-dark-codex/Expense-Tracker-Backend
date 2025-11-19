@@ -1,3 +1,4 @@
+import { config } from "../config";
 export class CustomError extends Error {
   statusCode: number;
   errors?: string[];
@@ -6,6 +7,8 @@ export class CustomError extends Error {
     super(message);
     this.statusCode = statusCode;
     this.errors = errors;
-    Error.captureStackTrace(this, this.constructor);
+    if (config.env !== "production") {
+      Error.captureStackTrace(this, this.constructor);
+    }
   }
 }

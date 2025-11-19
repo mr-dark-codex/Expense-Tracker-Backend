@@ -6,6 +6,7 @@ import {
 } from "../types/otherPayments.types";
 import { TransactionsService } from "./transactions.service";
 import { Prisma } from "generated/prisma/client";
+import { CustomError } from "../utils/customError";
 
 export class OtherPaymentsService {
   // private transactionsService = new TransactionsService();
@@ -77,7 +78,7 @@ export class OtherPaymentsService {
       });
 
       if (!otherpayment) {
-        throw new Error("Other payment not found");
+        throw new CustomError("Other payment not found", 404, ["Invalid ID"]);
       }
 
       const prevAmount = otherpayment.paidamount || new Decimal(0);
@@ -89,7 +90,10 @@ export class OtherPaymentsService {
 
       // Validate payment doesn't exceed total amount
       if (newPaidAmount.greaterThan(otherpayment?.amount ?? new Decimal(0))) {
-        throw new Error("Paid amount cannot exceed total amount");
+        throw new CustomError("Paid amount cannot exceed total amount", 400, [
+          "Invalid paid amount",
+        ]);
+        // throw new Error("Paid amount cannot exceed total amount");
       }
 
       return await txClient.otherpayments.update({

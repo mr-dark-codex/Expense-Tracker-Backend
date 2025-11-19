@@ -5,6 +5,7 @@ import {
   UpdateTransactionDto,
 } from "../types/transactions.types";
 import { Prisma } from "generated/prisma/client";
+import { CustomError } from "../utils/customError";
 
 export class TransactionsService {
   async createv2(data: any, tx?: Prisma.TransactionClient) {
@@ -124,8 +125,10 @@ export class TransactionsService {
     const transactionAmount = new Decimal(data.amount || 0);
 
     if (transactionAmount.greaterThan(allocatedAmount)) {
-      throw new Error(
+      throw new CustomError(
         `Transaction amount (${transactionAmount}) exceeds allocated budget (${allocatedAmount})`,
+        400,
+        ["Allocation Limit Exceeded"],
       );
     }
   }
@@ -140,8 +143,10 @@ export class TransactionsService {
     const transactionAmount = new Decimal(data.amount || 0);
 
     if (transactionAmount.greaterThan(budgetAmount)) {
-      throw new Error(
+      throw new CustomError(
         `Transaction amount (${transactionAmount}) exceeds budget limit (${budgetAmount})`,
+        400,
+        ["Budget Limit Exceeded"],
       );
     }
   }
@@ -155,7 +160,7 @@ export class TransactionsService {
     });
 
     if (!mode) {
-      throw new Error("Invalid transaction mode");
+      throw new CustomError("Invalid transaction mode", 400, ["Invalid Mode"]);
     }
 
     const modeAmount = mode?.amount || new Decimal(0);
@@ -165,8 +170,10 @@ export class TransactionsService {
       data.transactiontype === "DEBIT" &&
       transactionAmount.greaterThan(modeAmount)
     ) {
-      throw new Error(
+      throw new CustomError(
         `Insufficient balance. Available: ${modeAmount}, Required: ${transactionAmount}`,
+        400,
+        ["Insufficient Balance"],
       );
     }
   }
@@ -190,8 +197,10 @@ export class TransactionsService {
     });
 
     if (!budgetAllocation) {
-      throw new Error(
+      throw new CustomError(
         "No budget allocation found for this category in the current month.",
+        400,
+        ["Budget Allocation Missing"],
       );
     }
 
@@ -217,8 +226,10 @@ export class TransactionsService {
     });
 
     if (!budgetAllocation) {
-      throw new Error(
+      throw new CustomError(
         "No budget allocation found for this category in the current month.",
+        400,
+        ["Budget Allocation Missing"],
       );
     }
 
